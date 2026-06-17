@@ -10,6 +10,7 @@
   QLP.DEFAULT_SETTINGS = {
     triggerMode: 'hover',
     hoverDelay: 500,
+    hideDelay: 300,
     previewWidth: 600,
     previewHeight: 400,
     enableVideoPreview: true,
@@ -192,6 +193,7 @@
   QLP.currentLinkTitle = '';
   QLP.currentLinkData = null;
   QLP.isPanelHovered = false;
+  QLP.currentHoveredLinkEl = null;
   QLP.isBatchModeActive = false;
   QLP.batchCollectedLinks = [];
   QLP.batchComparePanel = null;

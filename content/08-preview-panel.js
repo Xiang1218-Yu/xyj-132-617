@@ -15,6 +15,7 @@
   _.currentLinkData = null;
   _.isFavoriteCurrent = false;
   _.isPanelHovered = false;
+  _.currentHoveredLinkEl = null;
 
   _.createPreviewPanel = function createPreviewPanel() {
     if (_.previewPanel) return _.previewPanel;
@@ -232,6 +233,7 @@
       _.currentLinkData = null;
       _.isFavoriteCurrent = false;
       _.isPanelHovered = false;
+      _.currentHoveredLinkEl = null;
       const content = _.previewPanel.querySelector('#qlp-preview-content');
       if (content) {
         const videos = content.querySelectorAll('video');
@@ -282,12 +284,18 @@
     const link = event.target.closest('a');
     if (!link || !link.href || !_.isValidUrl(link.href)) return;
 
+    /* 如果仍在同一个 <a> 元素内移动（例如在子元素间切换），
+       不重置计时器，避免 hoverDelay 被反复刷新导致预览永远无法弹出 */
+    if (_.currentHoveredLinkEl === link && _.hoverTimer) return;
+
     if (_.hideTimer) {
       clearTimeout(_.hideTimer);
       _.hideTimer = null;
     }
 
     if (_.hoverTimer) clearTimeout(_.hoverTimer);
+
+    _.currentHoveredLinkEl = link;
 
     _.hoverTimer = setTimeout(() => {
       _.showPreview(link, event);
@@ -300,6 +308,15 @@
 
     const link = event.target.closest('a');
     if (!link || !link.href) return;
+
+    /* 检查 relatedTarget：如果鼠标移入的元素仍在同一个 <a> 内，
+       说明并未真正离开链接，不应清除计时器或调度隐藏 */
+    if (event.relatedTarget) {
+      const relatedLink = event.relatedTarget.closest?.('a');
+      if (relatedLink === link) return;
+    }
+
+    _.currentHoveredLinkEl = null;
 
     if (_.hoverTimer) {
       clearTimeout(_.hoverTimer);
@@ -455,7 +472,9 @@
       body.style.height = _.settings.previewHeight + 'px';
     }
 
-    _.positionPreviewPanel(panel, link, event, _.settings.previewWidth, _.settings.previewHeight + 60);
+    /* 修正参数顺序：函数签名为 positionPreviewPanel(event, panel, width, height)，
+       原调用 (panel, link, event, width, height) 导致参数错位，面板定位完全失效 */
+    _.positionPreviewPanel(event, panel, _.settings.previewWidth, _.settings.previewHeight + 60);
 
     panel.classList.add('qlp-visible');
 
