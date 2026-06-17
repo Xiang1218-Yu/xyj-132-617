@@ -57,17 +57,20 @@
         _.addLinkMarker(link, securityInfo, _.batchCollectedLinks.length);
       }
       
-      chrome.runtime.sendMessage({
-        action: 'addPreviewHistory',
-        item: {
-          url: absoluteUrl,
-          title: linkData.title,
-          type: linkType,
-          favicon: linkData.favicon,
-          siteName: _.getHostname(absoluteUrl),
-          security: securityInfo
-        }
-      });
+      // 安全调用 chrome.runtime.sendMessage，兼容非扩展环境
+      if (chrome?.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({
+          action: 'addPreviewHistory',
+          item: {
+            url: absoluteUrl,
+            title: linkData.title,
+            type: linkType,
+            favicon: linkData.favicon,
+            siteName: _.getHostname(absoluteUrl),
+            security: securityInfo
+          }
+        });
+      }
       
       _.updateBatchCount();
     }

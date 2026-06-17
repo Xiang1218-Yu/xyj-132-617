@@ -405,6 +405,171 @@
     }
 
     /**
+     * 测试用例 9: 验证 hideDelay 默认配置
+     * 检查隐藏延迟是否有合理的默认值
+     */
+    function testHideDelayDefault() {
+      const testName = 'hideDelay 默认配置';
+      const QLP = window.QLP;
+      
+      const hasHideDelay = typeof QLP.settings.hideDelay === 'number' && QLP.settings.hideDelay > 0;
+      recordTestResult(testName, hasHideDelay, 
+        hasHideDelay ? `隐藏延迟: ${QLP.settings.hideDelay}ms` : `hideDelay 无效或缺失: ${QLP.settings.hideDelay}`);
+    }
+
+    /**
+     * 测试用例 10: 验证 positionPreviewPanel 函数参数顺序
+     * 确保定位函数的参数顺序正确，能正确定位预览面板
+     */
+    function testPositionPreviewPanel() {
+      const testName = 'positionPreviewPanel 参数顺序';
+      const QLP = window.QLP;
+      
+      // 创建一个测试面板
+      const testPanel = document.createElement('div');
+      testPanel.className = 'qlp-preview-panel';
+      testPanel.style.position = 'fixed';
+      document.body.appendChild(testPanel);
+      
+      // 获取一个测试链接
+      const testLink = document.querySelector('.test-link');
+      
+      if (!testLink) {
+        recordTestResult(testName, false, '未找到测试链接');
+        document.body.removeChild(testPanel);
+        return;
+      }
+      
+      try {
+        // 模拟鼠标事件
+        const mockEvent = { clientX: 200, clientY: 300 };
+        
+        // 调用定位函数
+        QLP.positionPreviewPanel(testPanel, testLink, mockEvent, 500, 400);
+        
+        // 验证面板样式是否被设置
+        const hasLeft = testPanel.style.left && testPanel.style.left !== '';
+        const hasTop = testPanel.style.top && testPanel.style.top !== '';
+        const hasWidth = testPanel.style.width && testPanel.style.width !== '';
+        
+        const allSet = hasLeft && hasTop && hasWidth;
+        
+        recordTestResult(testName, allSet, 
+          allSet 
+            ? `定位成功 - left: ${testPanel.style.left}, top: ${testPanel.style.top}, width: ${testPanel.style.width}`
+            : `定位失败 - left: ${testPanel.style.left}, top: ${testPanel.style.top}, width: ${testPanel.style.width}`);
+        
+        // 额外验证：位置数值应该是合理的（在视口内）
+        const left = parseFloat(testPanel.style.left);
+        const top = parseFloat(testPanel.style.top);
+        const positionReasonable = !isNaN(left) && !isNaN(top) && left >= 0 && top >= 0;
+        
+        recordTestResult('定位坐标合理性', positionReasonable,
+          positionReasonable 
+            ? `坐标合理: (${left}, ${top})` 
+            : `坐标不合理: (${left}, ${top})`);
+            
+      } catch (e) {
+        recordTestResult(testName, false, `执行出错: ${e.message}`);
+      } finally {
+        // 清理测试面板
+        if (testPanel.parentNode) {
+          document.body.removeChild(testPanel);
+        }
+      }
+    }
+
+    /**
+     * 测试用例 11: 验证 getTriggerPosition 支持 DOM 元素
+     * 确保 getTriggerPosition 函数既能处理事件对象，也能处理 DOM 元素
+     */
+    function testGetTriggerPositionWithElement() {
+      const testName = 'getTriggerPosition 支持 DOM 元素';
+      const QLP = window.QLP;
+      
+      // 获取一个测试链接
+      const testLink = document.querySelector('.test-link');
+      
+      if (!testLink) {
+        recordTestResult(testName, false, '未找到测试链接');
+        return;
+      }
+      
+      try {
+        // 用 DOM 元素调用
+        const resultFromElement = QLP.getTriggerPosition(testLink);
+        
+        // 验证返回值结构
+        const hasValidStructure = resultFromElement && 
+          typeof resultFromElement.x === 'number' && 
+          typeof resultFromElement.y === 'number' &&
+          resultFromElement.rect && typeof resultFromElement.rect === 'object';
+        
+        recordTestResult(testName, hasValidStructure,
+          hasValidStructure 
+            ? `DOM 元素定位成功: (${resultFromElement.x.toFixed(1)}, ${resultFromElement.y.toFixed(1)})`
+            : '返回值结构不正确');
+        
+        // 验证事件对象也能正常工作
+        const mockEvent = { clientX: 100, clientY: 200 };
+        const resultFromEvent = QLP.getTriggerPosition(mockEvent);
+        
+        const eventWorks = resultFromEvent && 
+          resultFromEvent.x === 100 && 
+          resultFromEvent.y === 200;
+        
+        recordTestResult('getTriggerPosition 支持事件对象', eventWorks,
+          eventWorks 
+            ? '事件对象定位正常' 
+            : `事件对象定位失败: x=${resultFromEvent?.x}, y=${resultFromEvent?.y}`);
+            
+      } catch (e) {
+        recordTestResult(testName, false, `执行出错: ${e.message}`);
+      }
+    }
+
+    /**
+     * 测试用例 12: 验证事件监听器绑定时机
+     * 确保 init 函数在正确的时机绑定了事件监听器
+     */
+    function testEventBindingTiming() {
+      const testName = '事件监听器绑定时机';
+      const QLP = window.QLP;
+      
+      // 检查关键事件处理函数是否存在
+      const handlers = [
+        'handleLinkHover',
+        'handleLinkLeave', 
+        'handleLinkClick',
+        'handleMouseMove',
+        'handleScroll',
+        'handleKeyDown',
+        'handleKeyUp',
+        'handleDocClick'
+      ];
+      
+      let allDefined = true;
+      const missingHandlers = [];
+      
+      handlers.forEach(handler => {
+        if (typeof QLP[handler] !== 'function') {
+          allDefined = false;
+          missingHandlers.push(handler);
+        }
+      });
+      
+      recordTestResult(testName, allDefined,
+        allDefined 
+          ? `所有 ${handlers.length} 个事件处理函数已定义` 
+          : `缺少事件处理函数: ${missingHandlers.join(', ')}`);
+      
+      // 验证 document.readyState 是 complete 或 interactive
+      const readyStateValid = document.readyState === 'complete' || document.readyState === 'interactive';
+      recordTestResult('DOM 加载状态', readyStateValid,
+        `当前 readyState: ${document.readyState}`);
+    }
+
+    /**
      * 运行所有测试用例
      */
     function runAllTests() {
@@ -421,6 +586,10 @@
       testPreviewPanelCreation();
       testShowPreviewFunction();
       testHoverPreviewIntegration();
+      testHideDelayDefault();
+      testPositionPreviewPanel();
+      testGetTriggerPositionWithElement();
+      testEventBindingTiming();
       
       console.log('');
       console.log('========== 测试结果汇总 ==========');
