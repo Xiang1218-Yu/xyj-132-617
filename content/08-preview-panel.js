@@ -455,7 +455,10 @@
       body.style.height = _.settings.previewHeight + 'px';
     }
 
-    _.positionPreviewPanel(panel, link, event, _.settings.previewWidth, _.settings.previewHeight + 60);
+    // 创建一个以链接元素为 target 的伪事件对象，确保定位基于链接元素而非内部子元素
+    // height 参数传 previewHeight，函数内部会自动加上 header/footer 的 60px 补偿
+    const triggerEvent = { target: link, clientX: event?.clientX, clientY: event?.clientY };
+    _.positionPreviewPanel(triggerEvent, panel, _.settings.previewWidth, _.settings.previewHeight);
 
     panel.classList.add('qlp-visible');
 
