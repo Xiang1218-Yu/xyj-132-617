@@ -282,6 +282,8 @@
     const link = event.target.closest('a');
     if (!link || !link.href || !_.isValidUrl(link.href)) return;
 
+    if (_.previewPanel && _.previewPanel.contains(event.target)) return;
+
     if (_.hideTimer) {
       clearTimeout(_.hideTimer);
       _.hideTimer = null;
@@ -289,8 +291,16 @@
 
     if (_.hoverTimer) clearTimeout(_.hoverTimer);
 
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+
     _.hoverTimer = setTimeout(() => {
-      _.showPreview(link, event);
+      const syntheticEvent = {
+        target: link,
+        clientX: mouseX,
+        clientY: mouseY
+      };
+      _.showPreview(link, syntheticEvent);
     }, _.settings.hoverDelay);
   };
 
@@ -300,6 +310,10 @@
 
     const link = event.target.closest('a');
     if (!link || !link.href) return;
+
+    if (_.previewPanel && _.previewPanel.contains(event.relatedTarget)) return;
+
+    if (event.relatedTarget && link.contains(event.relatedTarget)) return;
 
     if (_.hoverTimer) {
       clearTimeout(_.hoverTimer);
@@ -455,7 +469,7 @@
       body.style.height = _.settings.previewHeight + 'px';
     }
 
-    _.positionPreviewPanel(panel, link, event, _.settings.previewWidth, _.settings.previewHeight + 60);
+    _.positionPreviewPanel(event, panel, _.settings.previewWidth, _.settings.previewHeight + 60);
 
     panel.classList.add('qlp-visible');
 
