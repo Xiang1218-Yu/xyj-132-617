@@ -354,9 +354,12 @@
   };
 
   _.savePositionSettings = function savePositionSettings() {
-    chrome.storage.sync.set({
-      positioning: _.settings.positioning
-    });
+    // 安全调用 chrome.storage.sync.set，兼容非扩展环境
+    if (chrome?.storage?.sync) {
+      chrome.storage.sync.set({
+        positioning: _.settings.positioning
+      });
+    }
   };
 
   _.getPositionModeLabel = function getPositionModeLabel(mode) {

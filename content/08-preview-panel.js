@@ -482,17 +482,20 @@
 
     _.checkFavoriteStatus(absoluteUrl);
 
-    chrome.runtime.sendMessage({
-      action: 'addPreviewHistory',
-      item: {
-        url: absoluteUrl,
-        title: _.currentLinkTitle,
-        type: linkType,
-        favicon: _.currentLinkData.favicon,
-        siteName: _.getHostname(absoluteUrl),
-        security: securityInfo
-      }
-    });
+    // 安全调用 chrome.runtime.sendMessage，兼容非扩展环境
+    if (chrome?.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({
+        action: 'addPreviewHistory',
+        item: {
+          url: absoluteUrl,
+          title: _.currentLinkTitle,
+          type: linkType,
+          favicon: _.currentLinkData.favicon,
+          siteName: _.getHostname(absoluteUrl),
+          security: securityInfo
+        }
+      });
+    }
   };
 
   _.handleMouseMove = function handleMouseMove(event) {
