@@ -8,17 +8,21 @@
   window.QLP = window.QLP || {};
   const _ = QLP;
 
-  _.getTriggerPosition = function getTriggerPosition(event) {
+  _.getTriggerPosition = function getTriggerPosition(eventOrEl) {
     let triggerX, triggerY, triggerRect;
 
-    if (event && event.target && event.target.getBoundingClientRect) {
-      triggerRect = event.target.getBoundingClientRect();
+    if (eventOrEl && eventOrEl.getBoundingClientRect && typeof eventOrEl.getBoundingClientRect === 'function') {
+      triggerRect = eventOrEl.getBoundingClientRect();
       triggerX = triggerRect.left + triggerRect.width / 2;
       triggerY = triggerRect.top + triggerRect.height / 2;
-    } else if (event && typeof event.clientX === 'number') {
-      triggerX = event.clientX;
-      triggerY = event.clientY;
-      triggerRect = { left: event.clientX, top: event.clientY, right: event.clientX, bottom: event.clientY, width: 0, height: 0 };
+    } else if (eventOrEl && eventOrEl.target && eventOrEl.target.getBoundingClientRect) {
+      triggerRect = eventOrEl.target.getBoundingClientRect();
+      triggerX = triggerRect.left + triggerRect.width / 2;
+      triggerY = triggerRect.top + triggerRect.height / 2;
+    } else if (eventOrEl && typeof eventOrEl.clientX === 'number') {
+      triggerX = eventOrEl.clientX;
+      triggerY = eventOrEl.clientY;
+      triggerRect = { left: eventOrEl.clientX, top: eventOrEl.clientY, right: eventOrEl.clientX, bottom: eventOrEl.clientY, width: 0, height: 0 };
     } else {
       triggerX = window.innerWidth / 2;
       triggerY = window.innerHeight / 2;
@@ -294,11 +298,11 @@
     _.mouseFollowRAFId = requestAnimationFrame(animate);
   };
 
-  _.positionPreviewPanel = function positionPreviewPanel(event, panel, width = null, height = null) {
+  _.positionPreviewPanel = function positionPreviewPanel(panel, triggerEl, event, width = null, height = null) {
     const panelWidth = width || _.settings.previewWidth;
     const panelHeight = (height || _.settings.previewHeight) + 60;
     const posSettings = _.settings.positioning;
-    const trigger = _.getTriggerPosition(event);
+    const trigger = _.getTriggerPosition(triggerEl || event);
 
     let result;
     const mode = posSettings.mode;
@@ -354,9 +358,12 @@
   };
 
   _.savePositionSettings = function savePositionSettings() {
-    chrome.storage.sync.set({
-      positioning: _.settings.positioning
-    });
+    // 安全调用 chrome.storage.sync.set，兼容非扩展环境
+    if (chrome?.storage?.sync) {
+      chrome.storage.sync.set({
+        positioning: _.settings.positioning
+      });
+    }
   };
 
   _.getPositionModeLabel = function getPositionModeLabel(mode) {

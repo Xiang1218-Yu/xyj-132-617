@@ -606,6 +606,21 @@
       }
     }
 
+    // 检查是否有 chrome.runtime.sendMessage API
+    // 如果没有（例如在普通网页环境中），直接使用备用 iframe 模式
+    if (!chrome?.runtime?.sendMessage) {
+      // 非扩展环境下，直接使用 iframe 备用模式
+      setTimeout(() => {
+        if (!completed) {
+          completed = true;
+          clearInterval(progressInterval);
+          clearTimeout(timeoutId);
+          _.renderFallbackPreview(url, container, type, securityBadge, retryCount);
+        }
+      }, 300);
+      return;
+    }
+
     try {
       chrome.runtime.sendMessage({ action: 'fetchPageInfo', url: url }, (response) => {
         if (completed) return;
@@ -1262,6 +1277,12 @@
     function loadSnapshotMode() {
       if (snapshotTried) return;
       snapshotTried = true;
+
+      // 如果没有 chrome.runtime.sendMessage API，直接显示错误
+      if (!chrome?.runtime?.sendMessage) {
+        showEmbedError('snapshot_failed', '当前环境不支持快照模式，请在新标签页中打开');
+        return;
+      }
 
       if (embedLoading) {
         embedLoading.style.display = 'flex';

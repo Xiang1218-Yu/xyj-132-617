@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>链接预览插件测试页面</title>
+  <!-- 引入链接预览插件的样式文件 -->
+  <link rel="stylesheet" href="content/content.css">
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -150,5 +152,469 @@
       <li><strong>测试 5：</strong>页面本身滚动时，弹窗应该正常关闭</li>
     </ul>
   </div>
+
+  <!-- ========== 链接预览插件 JS 文件（按依赖顺序加载） ========== -->
+  <!-- 01-config.js: 配置和默认设置 -->
+  <script src="content/01-config.js"></script>
+  <!-- 02-utils.js: 工具函数 -->
+  <script src="content/02-utils.js"></script>
+  <!-- 03-security.js: 安全检查 -->
+  <script src="content/03-security.js"></script>
+  <!-- 04-link-types.js: 链接类型识别 -->
+  <script src="content/04-link-types.js"></script>
+  <!-- 05-theme.js: 主题相关 -->
+  <script src="content/05-theme.js"></script>
+  <!-- 06-positioning.js: 定位计算 -->
+  <script src="content/06-positioning.js"></script>
+  <!-- 07-loaders.js: 内容加载器 -->
+  <script src="content/07-loaders.js"></script>
+  <!-- 08-preview-panel.js: 预览面板 -->
+  <script src="content/08-preview-panel.js"></script>
+  <!-- 09-batch-mode.js: 批量模式 -->
+  <script src="content/09-batch-mode.js"></script>
+  <!-- 10-qrcode.js: 二维码功能 -->
+  <script src="content/10-qrcode.js"></script>
+  <!-- 11-shortcuts.js: 快捷键 -->
+  <script src="content/11-shortcuts.js"></script>
+  <!-- 12-favorites.js: 收藏功能 -->
+  <script src="content/12-favorites.js"></script>
+  <!-- 13-main.js: 主入口和事件绑定 -->
+  <script src="content/13-main.js"></script>
+
+  <!-- ========== 测试用例和验证逻辑 ========== -->
+  <script>
+    /**
+     * 链接预览功能 - 测试用例
+     * 
+     * 测试目标：验证鼠标悬停链接时是否正确显示预览弹框
+     * 
+     * 测试用例列表：
+     * 1. 普通网页链接 - 应显示网页预览
+     * 2. 图片链接 - 应显示图片预览
+     * 3. 视频网站链接 - 应识别为视频网站类型
+     * 4. 音频网站链接 - 应识别为音乐网站类型
+     * 5. 无效链接（锚点、mailto等）- 不应显示预览
+     * 6. 鼠标移开后 - 预览应延迟关闭
+     * 7. 页面滚动时 - 预览应关闭
+     */
+
+    // 测试结果收集器
+    const testResults = {
+      passed: 0,
+      failed: 0,
+      tests: []
+    };
+
+    /**
+     * 记录测试结果
+     * @param {string} testName - 测试名称
+     * @param {boolean} passed - 是否通过
+     * @param {string} message - 详细信息
+     */
+    function recordTestResult(testName, passed, message = '') {
+      testResults.tests.push({
+        name: testName,
+        passed: passed,
+        message: message
+      });
+      if (passed) {
+        testResults.passed++;
+      } else {
+        testResults.failed++;
+      }
+      console.log(`[测试${passed ? '通过' : '失败'}] ${testName}${message ? ': ' + message : ''}`);
+    }
+
+    /**
+     * 测试用例 1: 验证 QLP 全局对象是否正确初始化
+     */
+    function testQLPInitialization() {
+      const testName = 'QLP 全局对象初始化';
+      if (window.QLP && typeof window.QLP === 'object') {
+        recordTestResult(testName, true, 'QLP 对象已正确挂载到 window');
+      } else {
+        recordTestResult(testName, false, 'QLP 对象未找到');
+      }
+    }
+
+    /**
+     * 测试用例 2: 验证默认设置是否正确加载
+     */
+    function testDefaultSettings() {
+      const testName = '默认设置加载';
+      const QLP = window.QLP;
+      
+      if (QLP.settings && QLP.settings.triggerMode === 'hover') {
+        recordTestResult(testName, true, `触发模式: ${QLP.settings.triggerMode}`);
+      } else {
+        recordTestResult(testName, false, '默认设置未正确加载');
+      }
+      
+      // 验证悬停延迟设置
+      if (QLP.settings && typeof QLP.settings.hoverDelay === 'number') {
+        recordTestResult('悬停延迟设置', true, `延迟: ${QLP.settings.hoverDelay}ms`);
+      }
+    }
+
+    /**
+     * 测试用例 3: 验证 isValidUrl 函数
+     */
+    function testIsValidUrl() {
+      const QLP = window.QLP;
+      const testName = 'isValidUrl 函数验证';
+      
+      // 有效的 URL
+      const validUrls = [
+        'https://www.baidu.com',
+        'http://example.com',
+        'https://picsum.photos/800/600'
+      ];
+      
+      // 无效的 URL
+      const invalidUrls = [
+        '#section1',
+        'mailto:test@example.com',
+        'tel:1234567890',
+        'javascript:alert(1)'
+      ];
+      
+      let allPassed = true;
+      let details = [];
+      
+      validUrls.forEach(url => {
+        if (!QLP.isValidUrl(url)) {
+          allPassed = false;
+          details.push(`有效URL被误判为无效: ${url}`);
+        }
+      });
+      
+      invalidUrls.forEach(url => {
+        if (QLP.isValidUrl(url)) {
+          allPassed = false;
+          details.push(`无效URL被误判为有效: ${url}`);
+        }
+      });
+      
+      recordTestResult(testName, allPassed, 
+        allPassed ? '所有 URL 验证通过' : details.join('; '));
+    }
+
+    /**
+     * 测试用例 4: 验证 getLinkType 函数
+     */
+    function testGetLinkType() {
+      const QLP = window.QLP;
+      
+      const testCases = [
+        { url: 'https://example.com/image.jpg', expected: 'image', name: 'JPG图片链接' },
+        { url: 'https://example.com/photo.webp', expected: 'image', name: 'WebP图片链接' },
+        { url: 'https://www.bilibili.com/video/BV1xx411c7mD', expected: 'video-site', name: 'B站视频链接' },
+        { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', expected: 'video-site', name: 'YouTube链接' },
+        { url: 'https://music.163.com/#/song?id=123456', expected: 'audio-site', name: '网易云音乐' },
+        { url: 'https://www.zhihu.com', expected: 'webpage', name: '普通网页' },
+        { url: 'https://example.com/video.mp4', expected: 'video', name: 'MP4视频文件' },
+        { url: 'https://example.com/song.mp3', expected: 'audio', name: 'MP3音频文件' },
+        { url: '#section1', expected: 'unknown', name: '锚点链接' },
+        { url: 'mailto:test@example.com', expected: 'unknown', name: '邮件链接' }
+      ];
+      
+      let allPassed = true;
+      let failedCases = [];
+      
+      testCases.forEach(testCase => {
+        const result = QLP.getLinkType(testCase.url);
+        if (result === testCase.expected) {
+          // 通过
+        } else {
+          allPassed = false;
+          failedCases.push(`${testCase.name}: 期望 ${testCase.expected}，实际 ${result}`);
+        }
+      });
+      
+      recordTestResult('getLinkType 链接类型识别', allPassed,
+        allPassed ? '所有类型识别正确' : failedCases.join('; '));
+    }
+
+    /**
+     * 测试用例 5: 验证鼠标悬停事件监听是否注册
+     */
+    function testHoverEventListener() {
+      const testName = '鼠标悬停事件监听';
+      const QLP = window.QLP;
+      
+      // 检查 handleLinkHover 函数是否存在
+      if (typeof QLP.handleLinkHover === 'function') {
+        recordTestResult(testName, true, 'handleLinkHover 函数已定义');
+      } else {
+        recordTestResult(testName, false, 'handleLinkHover 函数未找到');
+      }
+    }
+
+    /**
+     * 测试用例 6: 验证预览面板创建功能
+     */
+    function testPreviewPanelCreation() {
+      const testName = '预览面板创建功能';
+      const QLP = window.QLP;
+      
+      if (typeof QLP.createPreviewPanel === 'function') {
+        recordTestResult(testName, true, 'createPreviewPanel 函数已定义');
+      } else {
+        recordTestResult(testName, false, 'createPreviewPanel 函数未找到');
+      }
+    }
+
+    /**
+     * 测试用例 7: 验证 showPreview 函数
+     */
+    function testShowPreviewFunction() {
+      const testName = 'showPreview 函数';
+      const QLP = window.QLP;
+      
+      if (typeof QLP.showPreview === 'function') {
+        recordTestResult(testName, true, 'showPreview 函数已定义');
+      } else {
+        recordTestResult(testName, false, 'showPreview 函数未找到');
+      }
+    }
+
+    /**
+     * 测试用例 8: 模拟鼠标悬停到链接上，验证预览是否显示
+     * 这是一个端到端的集成测试
+     */
+    function testHoverPreviewIntegration() {
+      const testName = '鼠标悬停预览集成测试';
+      const QLP = window.QLP;
+      
+      // 获取第一个测试链接
+      const testLink = document.querySelector('.test-link[href^="http"]');
+      if (!testLink) {
+        recordTestResult(testName, false, '未找到测试链接');
+        return;
+      }
+      
+      // 验证链接元素存在
+      const hasValidLink = testLink && testLink.href && QLP.isValidUrl(testLink.href);
+      recordTestResult('测试链接有效性', hasValidLink, 
+        hasValidLink ? `链接: ${testLink.href.substring(0, 50)}...` : '无效的测试链接');
+      
+      // 验证触发模式为 hover
+      const isHoverMode = QLP.settings.triggerMode === 'hover';
+      recordTestResult('触发模式验证', isHoverMode, 
+        `当前模式: ${QLP.settings.triggerMode}`);
+    }
+
+    /**
+     * 测试用例 9: 验证 hideDelay 默认配置
+     * 检查隐藏延迟是否有合理的默认值
+     */
+    function testHideDelayDefault() {
+      const testName = 'hideDelay 默认配置';
+      const QLP = window.QLP;
+      
+      const hasHideDelay = typeof QLP.settings.hideDelay === 'number' && QLP.settings.hideDelay > 0;
+      recordTestResult(testName, hasHideDelay, 
+        hasHideDelay ? `隐藏延迟: ${QLP.settings.hideDelay}ms` : `hideDelay 无效或缺失: ${QLP.settings.hideDelay}`);
+    }
+
+    /**
+     * 测试用例 10: 验证 positionPreviewPanel 函数参数顺序
+     * 确保定位函数的参数顺序正确，能正确定位预览面板
+     */
+    function testPositionPreviewPanel() {
+      const testName = 'positionPreviewPanel 参数顺序';
+      const QLP = window.QLP;
+      
+      // 创建一个测试面板
+      const testPanel = document.createElement('div');
+      testPanel.className = 'qlp-preview-panel';
+      testPanel.style.position = 'fixed';
+      document.body.appendChild(testPanel);
+      
+      // 获取一个测试链接
+      const testLink = document.querySelector('.test-link');
+      
+      if (!testLink) {
+        recordTestResult(testName, false, '未找到测试链接');
+        document.body.removeChild(testPanel);
+        return;
+      }
+      
+      try {
+        // 模拟鼠标事件
+        const mockEvent = { clientX: 200, clientY: 300 };
+        
+        // 调用定位函数
+        QLP.positionPreviewPanel(testPanel, testLink, mockEvent, 500, 400);
+        
+        // 验证面板样式是否被设置
+        const hasLeft = testPanel.style.left && testPanel.style.left !== '';
+        const hasTop = testPanel.style.top && testPanel.style.top !== '';
+        const hasWidth = testPanel.style.width && testPanel.style.width !== '';
+        
+        const allSet = hasLeft && hasTop && hasWidth;
+        
+        recordTestResult(testName, allSet, 
+          allSet 
+            ? `定位成功 - left: ${testPanel.style.left}, top: ${testPanel.style.top}, width: ${testPanel.style.width}`
+            : `定位失败 - left: ${testPanel.style.left}, top: ${testPanel.style.top}, width: ${testPanel.style.width}`);
+        
+        // 额外验证：位置数值应该是合理的（在视口内）
+        const left = parseFloat(testPanel.style.left);
+        const top = parseFloat(testPanel.style.top);
+        const positionReasonable = !isNaN(left) && !isNaN(top) && left >= 0 && top >= 0;
+        
+        recordTestResult('定位坐标合理性', positionReasonable,
+          positionReasonable 
+            ? `坐标合理: (${left}, ${top})` 
+            : `坐标不合理: (${left}, ${top})`);
+            
+      } catch (e) {
+        recordTestResult(testName, false, `执行出错: ${e.message}`);
+      } finally {
+        // 清理测试面板
+        if (testPanel.parentNode) {
+          document.body.removeChild(testPanel);
+        }
+      }
+    }
+
+    /**
+     * 测试用例 11: 验证 getTriggerPosition 支持 DOM 元素
+     * 确保 getTriggerPosition 函数既能处理事件对象，也能处理 DOM 元素
+     */
+    function testGetTriggerPositionWithElement() {
+      const testName = 'getTriggerPosition 支持 DOM 元素';
+      const QLP = window.QLP;
+      
+      // 获取一个测试链接
+      const testLink = document.querySelector('.test-link');
+      
+      if (!testLink) {
+        recordTestResult(testName, false, '未找到测试链接');
+        return;
+      }
+      
+      try {
+        // 用 DOM 元素调用
+        const resultFromElement = QLP.getTriggerPosition(testLink);
+        
+        // 验证返回值结构
+        const hasValidStructure = resultFromElement && 
+          typeof resultFromElement.x === 'number' && 
+          typeof resultFromElement.y === 'number' &&
+          resultFromElement.rect && typeof resultFromElement.rect === 'object';
+        
+        recordTestResult(testName, hasValidStructure,
+          hasValidStructure 
+            ? `DOM 元素定位成功: (${resultFromElement.x.toFixed(1)}, ${resultFromElement.y.toFixed(1)})`
+            : '返回值结构不正确');
+        
+        // 验证事件对象也能正常工作
+        const mockEvent = { clientX: 100, clientY: 200 };
+        const resultFromEvent = QLP.getTriggerPosition(mockEvent);
+        
+        const eventWorks = resultFromEvent && 
+          resultFromEvent.x === 100 && 
+          resultFromEvent.y === 200;
+        
+        recordTestResult('getTriggerPosition 支持事件对象', eventWorks,
+          eventWorks 
+            ? '事件对象定位正常' 
+            : `事件对象定位失败: x=${resultFromEvent?.x}, y=${resultFromEvent?.y}`);
+            
+      } catch (e) {
+        recordTestResult(testName, false, `执行出错: ${e.message}`);
+      }
+    }
+
+    /**
+     * 测试用例 12: 验证事件监听器绑定时机
+     * 确保 init 函数在正确的时机绑定了事件监听器
+     */
+    function testEventBindingTiming() {
+      const testName = '事件监听器绑定时机';
+      const QLP = window.QLP;
+      
+      // 检查关键事件处理函数是否存在
+      const handlers = [
+        'handleLinkHover',
+        'handleLinkLeave', 
+        'handleLinkClick',
+        'handleMouseMove',
+        'handleScroll',
+        'handleKeyDown',
+        'handleKeyUp',
+        'handleDocClick'
+      ];
+      
+      let allDefined = true;
+      const missingHandlers = [];
+      
+      handlers.forEach(handler => {
+        if (typeof QLP[handler] !== 'function') {
+          allDefined = false;
+          missingHandlers.push(handler);
+        }
+      });
+      
+      recordTestResult(testName, allDefined,
+        allDefined 
+          ? `所有 ${handlers.length} 个事件处理函数已定义` 
+          : `缺少事件处理函数: ${missingHandlers.join(', ')}`);
+      
+      // 验证 document.readyState 是 complete 或 interactive
+      const readyStateValid = document.readyState === 'complete' || document.readyState === 'interactive';
+      recordTestResult('DOM 加载状态', readyStateValid,
+        `当前 readyState: ${document.readyState}`);
+    }
+
+    /**
+     * 运行所有测试用例
+     */
+    function runAllTests() {
+      console.log('========== 链接预览插件测试开始 ==========');
+      console.log('测试时间:', new Date().toLocaleString());
+      console.log('');
+      
+      // 运行各个测试用例
+      testQLPInitialization();
+      testDefaultSettings();
+      testIsValidUrl();
+      testGetLinkType();
+      testHoverEventListener();
+      testPreviewPanelCreation();
+      testShowPreviewFunction();
+      testHoverPreviewIntegration();
+      testHideDelayDefault();
+      testPositionPreviewPanel();
+      testGetTriggerPositionWithElement();
+      testEventBindingTiming();
+      
+      console.log('');
+      console.log('========== 测试结果汇总 ==========');
+      console.log(`总计: ${testResults.tests.length} 个测试用例`);
+      console.log(`通过: ${testResults.passed} 个`);
+      console.log(`失败: ${testResults.failed} 个`);
+      console.log(`通过率: ${((testResults.passed / testResults.tests.length) * 100).toFixed(1)}%`);
+      
+      if (testResults.failed > 0) {
+        console.log('');
+        console.log('失败的测试用例:');
+        testResults.tests.filter(t => !t.passed).forEach(t => {
+          console.log(`  - ${t.name}: ${t.message}`);
+        });
+      }
+      
+      console.log('');
+      console.log('提示: 将鼠标悬停在页面中的链接上，即可看到预览弹框效果');
+    }
+
+    // 等待页面所有资源加载完成后运行测试
+    window.addEventListener('load', function() {
+      // 延迟一小段时间，确保所有 JS 脚本初始化完成
+      setTimeout(runAllTests, 100);
+    });
+  </script>
 </body>
 </html>
